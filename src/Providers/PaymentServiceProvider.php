@@ -46,7 +46,9 @@ class PaymentServiceProvider extends ServiceProvider
         ], 'labify-payments-filament4');
 
         if ($this->app->runningInConsole()) {
-            $this->commands([InstallCommand::class]);
+            $this->commands([
+                \Labify\Gateways\Console\ScaffoldFilamentResources::class,
+            ]);
         }
     }
 }
