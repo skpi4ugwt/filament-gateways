@@ -1,0 +1,28 @@
+{
+  "name": "labify/filament-gateways",
+  "description": "Gateway-agnostic payments (Razorpay, PayU, Easebuzz) + Filament settings (v3/v4).",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Labify\\Gateways\\": "src/"
+    }
+  },
+  "require": {
+    "php": "^8.1",
+    "illuminate/support": "^10.0|^11.0|^12.0",
+    "illuminate/http": "^10.0|^11.0|^12.0",
+    "illuminate/database": "^10.0|^11.0|^12.0",
+    "illuminate/routing": "^10.0|^11.0|^12.0"
+  },
+  "suggest": {
+    "filament/filament": "For the optional admin settings UI (v3 or v4)."
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Labify\\Gateways\\Providers\\PaymentServiceProvider"
+      ]
+    }
+  }
+}
