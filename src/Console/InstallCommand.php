@@ -1,51 +1,31 @@
 <?php
-
 namespace Labify\Gateways\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Filesystem\Filesystem;
 
-class ScaffoldFilamentResources extends Command
+class InstallCommand extends Command
 {
-    protected $signature = 'labify:payments:scaffold {--filament=4 : Filament major version (3 or 4)}';
-    protected $description = 'Scaffold PaymentGatewaySetting Resource, Pages, and Schema into the app.';
+    protected $signature = 'labify:payments:install {--filament=4 : Filament major version (3 or 4)}';
+    protected $description = 'Publish config, run migrations, publish (or scaffold) Filament resources.';
 
-    public function handle(Filesystem $fs): int
+    public function handle(): int
     {
         $ver = (string) $this->option('filament');
-        $pkg = dirname(__DIR__, 2); // package root
 
-        // Source paths inside the package (put the *filled* versions here)
-        $srcResource = $pkg.'/resources/scaffolds/filament/v'.$ver.'/PaymentGatewaySettingResource.php';
-        $srcPages    = $pkg.'/resources/scaffolds/filament/v'.$ver.'/PaymentGatewaySettingResource/Pages';
-        $srcSchema   = $pkg.'/resources/scaffolds/filament/v'.$ver.'/PaymentGatewaySettings/Schemas';
+        $this->call('vendor:publish', ['--tag' => 'labify-payments-config']);
+        $this->call('migrate');
 
-        // Dest paths in the app
-        $appResource = app_path('Filament/Resources/PaymentGatewaySettingResource.php');
-        $appPagesDir = app_path('Filament/Resources/PaymentGatewaySettingResource/Pages');
-        $appSchemaDir= app_path('Filament/Resources/PaymentGatewaySettings/Schemas');
-
-        // Ensure dirs
-        $fs->ensureDirectoryExists(dirname($appResource));
-        $fs->ensureDirectoryExists($appPagesDir);
-        $fs->ensureDirectoryExists($appSchemaDir);
-
-        // Copy resource
-        $fs->copy($srcResource, $appResource);
-
-        // Copy pages
-        foreach ($fs->files($srcPages) as $file) {
-            $fs->copy($file->getPathname(), $appPagesDir.'/'.basename($file));
+        // If you are using vendor:publish tags:
+        if ($ver === '3') {
+            $this->call('vendor:publish', ['--tag' => 'labify-payments-filament3']);
+        } else {
+            $this->call('vendor:publish', ['--tag' => 'labify-payments-filament4']);
         }
 
-        // Copy schema helper(s)
-        foreach ($fs->files($srcSchema) as $file) {
-            $fs->copy($file->getPathname(), $appSchemaDir.'/'.basename($file));
-        }
+        // If you added the scaffold command (optional), you can call it instead (or as well):
+        // $this->call('labify:payments:scaffold', ['--filament' => $ver]);
 
-        $this->components->info('Filament resources scaffolded.');
-        $this->components->info('Run: php artisan optimize:clear && php artisan filament:assets');
-
+        $this->components->info('Labify payments installed.');
         return self::SUCCESS;
     }
 }

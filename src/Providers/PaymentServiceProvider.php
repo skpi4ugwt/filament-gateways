@@ -47,7 +47,8 @@ class PaymentServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \Labify\Gateways\Console\ScaffoldFilamentResources::class,
+                \Labify\Gateways\Console\InstallCommand::class,
+                \Labify\Gateways\Console\ScaffoldFilamentResources::class, // remove this line if you didn't add the file
             ]);
         }
     }
