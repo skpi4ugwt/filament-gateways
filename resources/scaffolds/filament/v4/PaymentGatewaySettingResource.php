@@ -17,24 +17,9 @@ use Filament\Tables\Table;
 class PaymentGatewaySettingResource extends Resource
 {
     protected static ?string $model = PaymentGatewaySetting::class;
-
-    // Remove nav properties to avoid type mismatches; use getters instead
-    public static function getNavigationIcon(): BackedEnum|string|null
-    {
-        // You can return an enum if you prefer, but a string is simplest:
-        return 'heroicon-o-credit-card';
-    }
-
-    public static function getNavigationGroup(): UnitEnum|string|null
-    {
-        return 'Settings';
-    }
-
-    public static function getNavigationLabel(): ?string
-    {
-        return 'Payment Gateways';
-    }
-
+    protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-credit-card';
+    protected static string | UnitEnum | null $navigationGroup = 'Settings';
+    protected static ?string $navigationLabel = 'Payment Gateways';
     public static ?string $recordTitleAttribute = 'name';
 
     public static function form(Form $form): Form
