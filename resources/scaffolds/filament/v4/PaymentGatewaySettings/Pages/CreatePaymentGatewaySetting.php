@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\PaymentGatewaySettings\Pages;
 
-use App\Filament\Resources\PaymentGatewaySettings\PaymentGatewaySettingResource;
+use App\Filament\Resources\PaymentGatewaySettingResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreatePaymentGatewaySetting extends CreateRecord

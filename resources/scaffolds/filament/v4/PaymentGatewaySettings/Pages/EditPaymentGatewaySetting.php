@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\PaymentGatewaySettingResource\Pages;
+namespace App\Filament\Resources\PaymentGatewaySettings\Pages;
 
 use App\Filament\Resources\PaymentGatewaySettingResource;
 use Filament\Resources\Pages\EditRecord;

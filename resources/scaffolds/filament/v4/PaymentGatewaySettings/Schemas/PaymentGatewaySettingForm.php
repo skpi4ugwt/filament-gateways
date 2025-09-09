@@ -2,42 +2,41 @@
 
 namespace App\Filament\Resources\PaymentGatewaySettings\Schemas;
 
-use Illuminate\Validation\Rule as LaravelRule;
-use Filament\Forms\Components\{
-    TextInput,
-    Toggle,
-    Section,
-    Select,
-    CheckboxList,
-    Placeholder,
-    Fieldset,
-    KeyValue
-};
-use Filament\Forms\Get as FormsGet;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Placeholder;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Forms\Components\KeyValue;
+use Filament\Schemas\Components\Rule;
+use Filament\Schemas\Schema;
+use	Filament\Schemas\Components\Utilities\Get;
 
 class PaymentGatewaySettingForm
 {
-    public static function components(): array
+    public static function configure(Schema $schema): Schema
     {
-        return [
-            Section::make('Gateway')
+        return $schema
+            ->components([
+                Section::make('Gateway')
                 ->schema([
                     Select::make('name')
                         ->label('Gateway')
                         ->options([
-                            'razorpay' => 'Razorpay',
+                           'razorpay' => 'Razorpay',
                             'payu'     => 'PayU',
                             'easebuzz' => 'Easebuzz',
+                            'phonepe'  => 'PhonePe',
                         ])
                         ->required()
-                        ->live()
-                        ->disabled(fn (string $operation) => $operation === 'edit')
-                        ->rule(fn ($record) =>
-                            LaravelRule::unique('payment_gateway_settings', 'name')->ignore($record?->id)
-                        ),
+                        ->disabledOn('edit')
+                        ->live(),
                     TextInput::make('display_label')
                         ->label('Display Label')
-                        ->placeholder('e.g. Razorpay (Live)')
+                        ->placeholder('e.g. Stripe (Live)')
                         ->maxLength(100),
                     Toggle::make('is_active')->label('Active'),
                     Toggle::make('is_default')->label('Default')
@@ -47,136 +46,147 @@ class PaymentGatewaySettingForm
             Section::make('Common Settings')
                 ->schema([
                     TextInput::make('base_url')
-                        ->label('API Base URL (optional override)')
-                        ->placeholder('Leave blank to use driver defaults per environment')
+                        ->label('API Base URL')
+                        ->placeholder('Auto-suggested per gateway')
                         ->datalist([
+                            'https://api.stripe.com/v1',
                             'https://api.razorpay.com/v1',
-                            'https://secure.payu.in',
-                            'https://test.payu.in',
-                            'https://api.easebuzz.in',
-                            'https://testpay.easebuzz.in',
+                            'https://api-m.paypal.com',        // live
+                            'https://api-m.sandbox.paypal.com',// sandbox
+                            'https://api.cashfree.com/pg',
+                            'https://sandbox.cashfree.com/pg',
+                            'https://api.phonepe.com/apis/pg-sandbox',
                         ]),
-                    Select::make('currency')
-                        ->label('Default Currency')
-                        ->options(['inr'=>'INR','usd'=>'USD','eur'=>'EUR'])
-                        ->default('inr')
-                        ->searchable(),
+
+                        Select::make('currency')
+                        ->options([
+                            'inr' => 'INR',
+                            'usd' => 'USD',
+                            'eur' => 'EUR',
+                        ])->default('inr')->searchable(),
                     CheckboxList::make('methods')
                         ->label('Allowed Methods')
                         ->options([
-                            'card'       => 'Card',
-                            'upi'        => 'UPI',
+                            'card' => 'Card',
+                            'upi' => 'UPI',
                             'netbanking' => 'Netbanking',
-                            'wallet'     => 'Wallet',
-                            'emi'        => 'EMI',
+                            'wallet' => 'Wallet',
+                            'emi' => 'EMI',
                         ])->columns(3),
-                    Placeholder::make('callback_hint')
-                        ->label('Callback / Redirect / Webhook (copy to provider)')
-                        ->content(function (FormsGet $get) {
-                            $gw = $get('name') ?: 'gateway';
-                            return
-                                "Success URL: " . url("/payments/{$gw}/return/success") . "\n" .
-                                "Failure URL: " . url("/payments/{$gw}/return/failure") . "\n" .
-                                "Webhook URL: " . url("/api/payments/{$gw}/webhook");
-                        }),
+                    Placeholder::make('webhook_url')
+                        ->label('Webhook Endpoint to set in provider')
+                        ->content(fn (Get $get) => $get('name')
+                            ? url("/api/payments/{$get('name')}/webhook")
+                            : 'Select a gateway to see the URL'),
                 ])->columns(2),
 
             Section::make('Credentials')
-                ->description('Fields change based on the selected gateway.')
+                ->description('Fields change based on the gateway you choose.')
                 ->schema([
-                    // Razorpay (top-level secrets)
                     Fieldset::make('Razorpay')
-                        ->visible(fn (FormsGet $get) => $get('name') === 'razorpay')
+                        ->visible(fn (Get $get) => $get('name') === 'razorpay')
                         ->schema([
                             TextInput::make('api_key')
                                 ->label('Key ID')->password()->revealable()
-                                ->afterStateHydrated(function (TextInput $c, $state) {
-                                    if (filled($state)) {
-                                        $c->state('__KEEP__')->placeholder('•••• already set ••••')
-                                          ->hint('Leave unchanged to keep existing value');
-                                    }
-                                })
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s))
-                                ->required(fn (FormsGet $get) => (bool)$get('is_active')),
+                                ->required(fn (Get $get) => (bool) $get('is_active')),
                             TextInput::make('api_secret')
                                 ->label('Key Secret')->password()->revealable()
-                                ->afterStateHydrated(function (TextInput $c, $state) {
-                                    if (filled($state)) {
-                                        $c->state('__KEEP__')->placeholder('•••• already set ••••')
-                                          ->hint('Leave unchanged to keep existing value');
-                                    }
-                                })
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s))
-                                ->required(fn (FormsGet $get) => (bool)$get('is_active')),
+                                ->required(fn (Get $get) => (bool) $get('is_active')),
                             TextInput::make('webhook_secret')
-                                ->label('Webhook Secret')->password()->revealable()
-                                ->afterStateHydrated(function (TextInput $c, $state) {
-                                    if (filled($state)) {
-                                        $c->state('__KEEP__')->placeholder('•••• already set ••••')
-                                          ->hint('Leave unchanged to keep existing value');
-                                    }
-                                })
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s)),
-                        ]),
-
-                    // PayU — bind to meta
-                    Fieldset::make('PayU')
-                        ->visible(fn (FormsGet $get) => $get('name') === 'payu')
-                        ->statePath('meta')
-                        ->schema([
-                            TextInput::make('merchant_key')
-                                ->label('Merchant Key')->password()->revealable()
-                                ->afterStateHydrated(fn (TextInput $c, $s) => filled($s) && $c->state('__KEEP__')->placeholder('•••• already set ••••')->hint('Leave unchanged to keep existing value'))
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s))
-                                ->required(fn (FormsGet $get) => (bool)$get('../../is_active')),
-                            TextInput::make('salt')
-                                ->label('Salt')->password()->revealable()
-                                ->afterStateHydrated(fn (TextInput $c, $s) => filled($s) && $c->state('__KEEP__')->placeholder('•••• already set ••••')->hint('Leave unchanged to keep existing value'))
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s))
-                                ->required(fn (FormsGet $get) => (bool)$get('../../is_active')),
-                            Select::make('env')
+                                ->label('Webhook Secret')->password()->revealable(),
+                            Select::make('meta.env')
                                 ->label('Environment')
-                                ->options(['live'=>'Live','test'=>'Test'])
-                                ->default('test'),
-                            TextInput::make('success_url')->label('Success Redirect URL (override)')->url(),
-                            TextInput::make('failure_url')->label('Failure Redirect URL (override)')->url(),
+                                ->options(['live' => 'Live', 'test' => 'Test'])
+                                ->default('test')
+                                ->helperText('Driver will pick the base URL unless overridden above.'),
                         ]),
+// ───────────────── PAYU ──────────────────
+Fieldset::make('PayU')
+    ->visible(fn (Get $get) => $get('name') === 'payu')
+    ->schema([
+        TextInput::make('meta.merchant_key')
+            ->label('Merchant Key')
+            ->password()
+            ->revealable()
+            // show a neutral sentinel instead of the real value
+            ->afterStateHydrated(function (TextInput $component, $state) {
+                if (filled($state)) {
+                    $component->state('__KEEP__')
+                        ->placeholder('•••• already set ••••')
+                        ->hint('A value is already saved. Leave as-is to keep it.');
+                }
+            })
+            // only write to DB if admin typed a new value
+            ->dehydrated(fn ($state) => $state !== '__KEEP__' && filled($state))
+            ->required(fn (Get $get) => (bool) $get('is_active')),
 
-                    // Easebuzz — bind to meta
-                    Fieldset::make('Easebuzz')
-                        ->visible(fn (FormsGet $get) => $get('name') === 'easebuzz')
-                        ->statePath('meta')
+        TextInput::make('meta.salt')
+            ->label('Salt')
+            ->password()
+            ->revealable()
+            ->afterStateHydrated(function (TextInput $component, $state) {
+                if (filled($state)) {
+                    $component->state('__KEEP__')
+                        ->placeholder('•••• already set ••••')
+                        ->hint('A value is already saved. Leave as-is to keep it.');
+                }
+            })
+            ->dehydrated(fn ($state) => $state !== '__KEEP__' && filled($state))
+            ->required(fn (Get $get) => (bool) $get('is_active')),
+
+        Select::make('meta.env')
+            ->label('Environment')
+            ->options(['live' => 'Live', 'test' => 'Test'])
+            ->default('test'),
+
+        TextInput::make('meta.success_url')
+            ->label('Success Redirect URL (override)')
+            ->url(),
+
+        TextInput::make('meta.failure_url')
+            ->label('Failure Redirect URL (override)')
+            ->url(),
+        ]),
+
+                   // ─────────────── PHONEPE (optional) ─────
+                    Fieldset::make('PhonePe')
+                        ->visible(fn (Get $get) => $get('name') === 'phonepe')
                         ->schema([
-                            TextInput::make('merchant_key')
-                                ->label('Merchant Key')->password()->revealable()
-                                ->afterStateHydrated(fn (TextInput $c, $s) => filled($s) && $c->state('__KEEP__')->placeholder('•••• already set ••••')->hint('Leave unchanged to keep existing value'))
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s))
-                                ->required(fn (FormsGet $get) => (bool)$get('../../is_active')),
-                            TextInput::make('salt')
-                                ->label('Salt')->password()->revealable()
-                                ->afterStateHydrated(fn (TextInput $c, $s) => filled($s) && $c->state('__KEEP__')->placeholder('•••• already set ••••')->hint('Leave unchanged to keep existing value'))
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s))
-                                ->required(fn (FormsGet $get) => (bool)$get('../../is_active')),
-                            TextInput::make('access_key')
-                                ->label('Access Key (optional)')->password()->revealable()
-                                ->afterStateHydrated(fn (TextInput $c, $s) => filled($s) && $c->state('__KEEP__')->placeholder('•••• already set ••••')->hint('Leave unchanged to keep existing value'))
-                                ->dehydrated(fn ($s) => $s !== '__KEEP__' && filled($s)),
-                            Select::make('env')
-                                ->label('Environment')
-                                ->options(['live'=>'Live','test'=>'Test'])
-                                ->default('test'),
+                            TextInput::make('meta.merchant_id')
+                                ->label('Merchant ID')->password()->revealable()
+                                ->required(fn (Get $get) => (bool) $get('is_active')),
+                            TextInput::make('meta.salt_key')
+                                ->label('Salt Key')->password()->revealable()
+                                ->required(fn (Get $get) => (bool) $get('is_active')),
+                            TextInput::make('meta.salt_index')
+                                ->label('Salt Index'),
                         ]),
-                ])->columns(2),
+                ])->columnSpan('full'),
 
-            // Optional read-only meta viewer (avoid clobbering structured meta)
-            /*Section::make('Advanced / Extra Meta')
+
+
+           /* Section::make('Advanced / Extra Meta')
                 ->schema([
                     KeyValue::make('meta')
-                        ->label('Additional Meta (read-only)')
-                        ->dehydrated(false)
-                        ->keyLabel('Key')
-                        ->valueLabel('Value'),
-                ]), */
-        ];
+                        ->label('Additional Meta (optional)')
+                        ->keyLabel('Key')->valueLabel('Value')
+                        ->addButtonLabel('Add'),
+                ]),*/
+        ])->columns(1)
+          ->model(PaymentGatewaySetting::class);
+          /*->rules([
+              'name' => [
+                  Rule::unique('payment_gateway_settings','name')->ignore(fn ($record) => $record?->id),
+              ],
+              // Example “required if active” validation per gateway
+              'api_key' => function (callable $get) {
+                  return $get('is_active') && in_array($get('name'), ['stripe','razorpay','cashfree','phonepe'])
+                      ? 'required' : 'nullable';
+              },
+              'api_secret' => function (callable $get) {
+                  return $get('is_active') && in_array($get('name'), ['stripe','razorpay'])
+                      ? 'required' : 'nullable';
+              },
+            ]); */
     }
 }

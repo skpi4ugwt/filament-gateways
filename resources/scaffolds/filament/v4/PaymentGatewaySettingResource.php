@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\PaymentGatewaySettings;
+namespace App\Filament\Resources;
 
 use App\Filament\Resources\PaymentGatewaySettings\Pages\CreatePaymentGatewaySetting;
 use App\Filament\Resources\PaymentGatewaySettings\Pages\EditPaymentGatewaySetting;
