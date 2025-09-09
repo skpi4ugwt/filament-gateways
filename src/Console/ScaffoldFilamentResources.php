@@ -19,18 +19,21 @@ class ScaffoldFilamentResources extends Command
 
         // source scaffold files inside the package
         $srcResource = $pkgRoot . "/resources/scaffolds/filament/v{$ver}/PaymentGatewaySettingResource.php";
-        $srcPagesDir = $pkgRoot . "/resources/scaffolds/filament/v{$ver}/PaymentGatewaySettingResource/Pages";
+        $srcPagesDir = $pkgRoot . "/resources/scaffolds/filament/v{$ver}/PaymentGatewaySettings/Pages";
         $srcSchemaDir= $pkgRoot . "/resources/scaffolds/filament/v{$ver}/PaymentGatewaySettings/Schemas";
+        $srcTableDir= $pkgRoot . "/resources/scaffolds/filament/v{$ver}/PaymentGatewaySettings/Tables";
 
         // destination inside the app
         $appResource = app_path('Filament/Resources/PaymentGatewaySettingResource.php');
-        $appPagesDir = app_path('Filament/Resources/PaymentGatewaySettingResource/Pages');
+        $appPagesDir = app_path('Filament/Resources/PaymentGatewaySettings/Pages');
         $appSchemaDir= app_path('Filament/Resources/PaymentGatewaySettings/Schemas');
+        $appTableDir= app_path('Filament/Resources/PaymentGatewaySettings/Tables');
 
         // ensure directories
         $fs->ensureDirectoryExists(dirname($appResource));
         $fs->ensureDirectoryExists($appPagesDir);
         $fs->ensureDirectoryExists($appSchemaDir);
+        $fs->ensureDirectoryExists($appTableDir);
 
         // copy resource
         if (!$fs->exists($srcResource)) {
@@ -47,6 +50,11 @@ class ScaffoldFilamentResources extends Command
         // copy schema
         foreach ($fs->files($srcSchemaDir) as $file) {
             $fs->copy($file->getPathname(), $appSchemaDir . '/' . $file->getFilename());
+        }
+
+        // copy schema
+        foreach ($fs->files($srcTableDir) as $file) {
+            $fs->copy($file->getPathname(), $appTableDir . '/' . $file->getFilename());
         }
 
         $this->components->info('Filament resources scaffolded.');
